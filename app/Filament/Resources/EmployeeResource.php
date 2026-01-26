@@ -266,16 +266,23 @@ class EmployeeResource extends Resource
                 Forms\Components\Section::make('Hak Akses & Pengaturan Absensi')
                     ->description('Tentukan apakah karyawan ini memiliki akses Admin/HR dan kewajiban absen.')
                     ->schema([
-                        Forms\Components\Grid::make(2)
+                        Forms\Components\Grid::make(3)
                             ->schema([
-                                // TOGGLE 1: IS HR (Bisa Login Web Admin)
+                                // IS HR (Penamnda final approval bisa untuk bypass approval spv dan manager)
+                                Forms\Components\Toggle::make('is_hr')
+                                    ->label('Akses Final Approval (HR)')
+                                    ->helperText('Aktifkan untuk fitur final approval HRD.')
+                                    ->default(false)
+                                    ->onColor('success'),
+
+                                // IS ACCESS WEB (Bisa Login Web Admin)
                                 Forms\Components\Toggle::make('is_access_web')
                                     ->label('Akses Login Dashboard (Admin/Approver)')
                                     ->helperText('Aktifkan untuk HRD, Manager, atau Direktur yang butuh akses login ke web untuk melakukan Approval.')
                                     ->default(false)
                                     ->onColor('success'),
 
-                                // TOGGLE 2: WAJIB ABSEN
+                                // WAJIB ABSEN
                                 Forms\Components\Toggle::make('is_attendance_required')
                                     ->label('Wajib Melakukan Absensi')
                                     ->helperText('Matikan jika karyawan ini (misal: Boss/HR Senior) TIDAK PERLU melakukan Clock In/Out harian.')
@@ -336,6 +343,15 @@ class EmployeeResource extends Resource
                     }),
 
                 Tables\Columns\IconColumn::make('is_access_web')
+                    ->label('Akses Web?')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-computer-desktop')
+                    ->falseIcon('heroicon-o-device-tablet')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->alignCenter(),
+
+                Tables\Columns\IconColumn::make('is_hr')
                     ->label('HR?')
                     ->boolean()
                     ->trueIcon('heroicon-o-check-badge')
