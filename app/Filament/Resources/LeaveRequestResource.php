@@ -106,6 +106,36 @@ class LeaveRequestResource extends Resource
                             ->live()
                             // Validasi: Start tidak boleh setelah End (jika End sudah diisi)
                             ->maxDate(fn(Get $get) => $get('end_date') ? \Carbon\Carbon::parse($get('end_date')) : null)
+                            ->rules([
+                                fn(Get $get, ?LeaveRequest $record) => function (string $attribute, $value, Closure $fail) use ($get, $record) {
+                                    $employeeId = $get('employee_id');
+                                    $startDate = $value;
+                                    $endDate = $get('end_date');
+
+                                    // Kalau data belum lengkap, skip dulu
+                                    if (!$employeeId || !$startDate || !$endDate) return;
+
+                                    // Cek Database
+                                    $conflictingRequest = LeaveRequest::query()
+                                        ->where('employee_id', $employeeId)
+                                        // Abaikan status Rejected & Cancelled (Kalau ditolak, boleh ajukan lagi di tgl yg sama)
+                                        ->whereNotIn('status', ['rejected', 'cancelled'])
+                                        // Cek Tumbukan Tanggal (Overlap Logic)
+                                        ->where(function ($query) use ($startDate, $endDate) {
+                                            $query->where('start_date', '<=', $endDate)
+                                                ->where('end_date', '>=', $startDate);
+                                        });
+
+                                    // Jika sedang Edit, jangan anggap diri sendiri sebagai bentrok
+                                    if ($record) {
+                                        $conflictingRequest->where('id', '!=', $record->id);
+                                    }
+
+                                    if ($conflictingRequest->exists()) {
+                                        $fail('Anda sudah memiliki pengajuan cuti pada rentang tanggal ini.');
+                                    }
+                                },
+                            ])
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 self::calculateDuration($get, $set);
                             }),
@@ -117,11 +147,7 @@ class LeaveRequestResource extends Resource
                             // Tanggal di kalender sebelum Start Date gak bisa diklik
                             ->minDate(fn(Get $get) => $get('start_date') ? \Carbon\Carbon::parse($get('start_date')) : null)
                             // Validasi: End harus >= Start
-                            ->after('start_date')
-                            ->rule(function (Get $get) {
-                                $start = $get('start_date');
-                                return "after_or_equal:$start";
-                            })
+                            ->afterOrEqual('start_date')
                             ->afterStateUpdated(function (Get $get, Set $set) {
                                 self::calculateDuration($get, $set);
                             }),
