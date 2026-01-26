@@ -331,7 +331,11 @@ class LeaveRequestResource extends Resource
                         return $record->status === 'pending' && $isSupervisor;
                     })
                     ->action(function (LeaveRequest $record) {
-                        $record->update(['status' => 'approved_by_supervisor']);
+                        $record->update([
+                            'status' => 'approved_by_supervisor',
+                            'approved_by' => auth()->user()->id,
+                            'approved_at' => now(),
+                        ]);
                         Notification::make()->title('Permohonan Disetujui Supervisor')->success()->send();
                     }),
 
@@ -359,7 +363,11 @@ class LeaveRequestResource extends Resource
                         return false;
                     })
                     ->action(function (LeaveRequest $record) {
-                        $record->update(['status' => 'approved_by_manager']);
+                        $record->update([
+                            'status' => 'approved_by_manager',
+                            'approved_by' => auth()->user()->id,
+                            'approved_at' => now(),
+                        ]);
                         Notification::make()->title('Permohonan Disetujui Manager')->success()->send();
                     }),
 
@@ -386,13 +394,18 @@ class LeaveRequestResource extends Resource
                         return false;
                     })
                     ->action(function (LeaveRequest $record) {
-
                         DB::transaction(function () use ($record) {
-                            // 1. Potong Saldo (Logic Saldo)
                             $leaveType = $record->leaveType;
+                            // AMBIL STATUS LANGSUNG DARI KATEGORI                            // Gak perlu lagi str_contains, langsung ambil value kolom 'category'
+                            $attendanceStatus = $record->leaveType->category;
+                            // Validasi Fail-safe (Jaga-jaga kalau null, default ke 'leave')
+                            if (!$attendanceStatus) {
+                                $attendanceStatus = 'leave';
+                            }
+
+                            // Potong Saldo
                             if ($leaveType->deducts_quota) {
                                 $year = Carbon::parse($record->start_date)->year;
-
                                 $balance = LeaveBalance::where('employee_id', $record->employee_id)
                                     ->where('leave_type_id', $record->leave_type_id)
                                     ->where('year', $year)
@@ -406,14 +419,14 @@ class LeaveRequestResource extends Resource
                                 $balance->increment('taken', $record->duration_days);
                             }
 
-                            // 2. Update Status Final
+                            // Update Status Request
                             $record->update([
                                 'status' => 'approved_by_hr',
                                 'approved_by' => auth()->user()->id,
                                 'approved_at' => now(),
                             ]);
 
-                            // 3. Generate Absen
+                            // --- 4. Generate Absen ---
                             $startDate = Carbon::parse($record->start_date);
                             $endDate = Carbon::parse($record->end_date);
 
@@ -425,9 +438,12 @@ class LeaveRequestResource extends Resource
                                         'date' => $startDate->toDateString(),
                                     ],
                                     [
-                                        'status' => 'leave',
+                                        'status' => $attendanceStatus,
                                         'clock_in' => null,
-                                        'clock_out' => null
+                                        'clock_out' => null,
+                                        'late_minutes' => 0,
+                                        'early_leave_minutes' => 0,
+                                        'overtime_minutes' => 0,
                                     ]
                                 );
                                 $startDate->addDay();
