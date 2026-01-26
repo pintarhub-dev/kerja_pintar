@@ -332,7 +332,7 @@ class LeaveRequestResource extends Resource
                     }),
 
                 // =========================================================
-                // 3. APPROVE FINAL (HR / OWNER) - JALUR CEPAT
+                // 3. APPROVE FINAL (HR / OWNER) - JALUR BYPASS
                 // =========================================================
                 Tables\Actions\Action::make('approve_hr')
                     ->label('Approve (Final)')
@@ -343,16 +343,15 @@ class LeaveRequestResource extends Resource
                         $user = auth()->user();
                         if (!$user) return false;
 
-                        // CEK ROLE MURNI (Tanpa cek table employees)
-                        // Karena Tenant Admin / Owner tidak punya data employee
-                        $isHr = in_array($user->role, ['tenant_admin', 'tenant_owner']);
-
-                        if (!$isHr) return false;
-
-                        // FAST TRACK LOGIC:
-                        // HR bisa approve kapan saja (Pending, SPV Approved, atau Manager Approved)
-                        // Selama belum Final Approved atau Rejected.
-                        return in_array($record->status, ['pending', 'approved_by_supervisor', 'approved_by_manager']);
+                        // HR boleh bypass spv dan manager
+                        if ($user->employee?->is_hr == 1) {
+                            return in_array($record->status, [
+                                'pending',
+                                'approved_by_supervisor',
+                                'approved_by_manager',
+                            ]);
+                        }
+                        return false;
                     })
                     ->action(function (LeaveRequest $record) {
 
@@ -411,7 +410,35 @@ class LeaveRequestResource extends Resource
                     ->icon('heroicon-m-x-mark')
                     ->color('danger')
                     ->form([Forms\Components\Textarea::make('rejection_reason')->required()])
-                    ->visible(fn(LeaveRequest $record) => !in_array($record->status, ['rejected', 'cancelled', 'approved_by_hr']))
+                    ->visible(function (LeaveRequest $record) {
+                        $user = auth()->user();
+                        if (!$user) return false;
+
+                        // Jangan tampilkan kalau sudah final
+                        if (in_array($record->status, ['rejected', 'cancelled', 'approved_by_hr'])) {
+                            return false;
+                        }
+
+                        $employee = $user->employee;
+                        $requestEmployee = $record->employee;
+
+                        // HR
+                        if ($employee?->is_hr == 1) {
+                            return true;
+                        }
+
+                        // Supervisor
+                        if ($requestEmployee?->employee_id_supervisor === $employee?->id) {
+                            return true;
+                        }
+
+                        // Manager
+                        if ($requestEmployee?->employee_id_manager === $employee?->id) {
+                            return true;
+                        }
+
+                        return false;
+                    })
                     ->action(function (LeaveRequest $record, array $data) {
                         $record->update([
                             'status' => 'rejected',
