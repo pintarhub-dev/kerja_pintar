@@ -121,7 +121,45 @@ class LeaveRequestResource extends Resource
                             ->label('Total Hari')
                             ->numeric()
                             ->readOnly()
-                            ->required(),
+                            ->required()
+                            ->rules([
+                                fn(Get $get) => function (string $attribute, $value, Closure $fail) use ($get) {
+                                    $employeeId = $get('employee_id');
+                                    $leaveTypeId = $get('leave_type_id');
+                                    $startDate = $get('start_date');
+
+                                    // Kalau data belum lengkap, skip dulu validasinya
+                                    if (!$employeeId || !$leaveTypeId || !$startDate) return;
+
+                                    // Cek Jenis Cuti: Apakah memotong saldo?
+                                    $leaveType = LeaveType::find($leaveTypeId);
+                                    if (!$leaveType || !$leaveType->deducts_quota) {
+                                        return; // Kalau tipe cuti "Sakit/Izin" (gak potong saldo), loloskan.
+                                    }
+
+                                    // Tentukan Tahun Saldo (Berdasarkan Tanggal Mulai Cuti)
+                                    // Misal request utk Januari 2026, berarti cari saldo 2026.
+                                    $year = \Carbon\Carbon::parse($startDate)->year;
+
+                                    // Cari Saldo di Database
+                                    $balance = LeaveBalance::where('employee_id', $employeeId)
+                                        ->where('leave_type_id', $leaveTypeId)
+                                        ->where('year', $year)
+                                        ->first();
+
+                                    // Saldo Belum Dibuat sama sekali
+                                    if (!$balance) {
+                                        $fail("Saldo cuti karyawan ini untuk tahun {$year} belum dibuat. Hubungi HRD untuk generate saldo.");
+                                        return;
+                                    }
+
+                                    // Saldo Ada, tapi Kurang
+                                    // $value adalah isi field duration_days
+                                    if ($balance->remaining < $value) {
+                                        $fail("Sisa saldo tidak mencukupi. Sisa: {$balance->remaining} hari. Diminta: {$value} hari.");
+                                    }
+                                },
+                            ]),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Alasan & Bukti')
