@@ -5,6 +5,7 @@ namespace App\Filament\Resources\LeaveRequestResource\Pages;
 use App\Filament\Resources\LeaveRequestResource;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
+use App\Models\LeaveRequest;
 
 class EditLeaveRequest extends EditRecord
 {
@@ -18,7 +19,8 @@ class EditLeaveRequest extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->visible(fn(LeaveRequest $record) => $record->status === 'pending'),
         ];
     }
 }
