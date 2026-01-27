@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources;
 
+use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column;
 use App\Filament\Resources\AttendanceSummaryResource\Pages;
 use App\Models\AttendanceSummary;
 use App\Models\Employee;
@@ -104,21 +107,48 @@ class AttendanceSummaryResource extends Resource
             ->defaultSort('date', 'desc')
             // ->modifyQueryUsing(fn($query) => $query->with(['employee.workLocation']))
             ->columns([
-                // 1. Identitas
                 Tables\Columns\TextColumn::make('employee.full_name')
                     ->label('Karyawan')
                     ->searchable()
                     ->sortable()
                     ->description(fn($record) => $record->employee->nik),
 
-                // 2. Tanggal & Shift
+                // Tanggal & Shift
                 Tables\Columns\TextColumn::make('date')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable()
                     ->description(fn($record) => $record->shift->name ?? '-'),
 
-                // 3. Status (Badge Keren)
+                // Jam Jadwal
+                Tables\Columns\TextColumn::make('schedule_in')
+                    ->label('Jadwal')
+                    ->getStateUsing(
+                        fn($record) =>
+                        $record->shift && $record->shift->is_day_off
+                            ? 'LIBUR'
+                            : ($record->schedule_in ? Carbon::parse($record->schedule_in)->format('H:i') . ' - ' . Carbon::parse($record->schedule_out)->format('H:i') : '-')
+                    )
+                    ->color('gray'),
+
+                // Jam Aktual (Clock In / Out)
+                Tables\Columns\TextColumn::make('clock_in')
+                    ->label('Absen Masuk')
+                    ->time('H:i')
+                    ->timezone(function (AttendanceSummary $record) {
+                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
+                    })
+                    ->placeholder('-'),
+
+                Tables\Columns\TextColumn::make('clock_out')
+                    ->label('Absen Pulang')
+                    ->time('H:i')
+                    ->timezone(function (AttendanceSummary $record) {
+                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
+                    })
+                    ->placeholder('-'),
+
+                // Status (Badge Keren)
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status')
                     ->badge()
@@ -169,35 +199,7 @@ class AttendanceSummaryResource extends Resource
                         default => 'gray',
                     }),
 
-                // 4. Jam Jadwal
-                Tables\Columns\TextColumn::make('schedule_in')
-                    ->label('Jadwal')
-                    ->getStateUsing(
-                        fn($record) =>
-                        $record->shift && $record->shift->is_day_off
-                            ? 'LIBUR'
-                            : ($record->schedule_in ? Carbon::parse($record->schedule_in)->format('H:i') . ' - ' . Carbon::parse($record->schedule_out)->format('H:i') : '-')
-                    )
-                    ->color('gray'),
-
-                // 5. Jam Aktual (Clock In / Out)
-                Tables\Columns\TextColumn::make('clock_in')
-                    ->label('Absen Masuk')
-                    ->time('H:i')
-                    ->timezone(function (AttendanceSummary $record) {
-                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
-                    })
-                    ->placeholder('-'),
-
-                Tables\Columns\TextColumn::make('clock_out')
-                    ->label('Absen Pulang')
-                    ->time('H:i')
-                    ->timezone(function (AttendanceSummary $record) {
-                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
-                    })
-                    ->placeholder('-'),
-
-                // 6. Telat (Merah jika > 0)
+                // Telat (Merah jika > 0)
                 Tables\Columns\TextColumn::make('late_minutes')
                     ->label('Telat')
                     ->state(fn($record) => $record->late_minutes > 0 ? $record->late_minutes . 'm' : '-')
@@ -248,6 +250,34 @@ class AttendanceSummaryResource extends Resource
                 SelectFilter::make('shift_id')
                     ->relationship('shift', 'name')
                     ->label('Shift'),
+            ])
+            ->headerActions([
+                ExportAction::make()
+                    ->label('Download Laporan Absen (Excel)')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->exports([
+                        ExcelExport::make()
+                            ->fromTable()
+                            ->withFilename(fn($resource) => 'Laporan_Absen_' . date('Y-m-d'))
+                            ->withColumns([
+                                Column::make('employee.nik')->heading('NIK'),
+                                Column::make('employee.full_name')->heading('Nama Karyawan'),
+                                Column::make('durasi_kerja')
+                                    ->heading('Durasi Kerja')
+                                    ->getStateUsing(function ($record) {
+                                        if ($record->clock_in && $record->clock_out) {
+                                            $in = Carbon::parse($record->clock_in);
+                                            $out = Carbon::parse($record->clock_out);
+                                            return $in->diff($out)->format('%H Jam %I Menit');
+                                        }
+                                        return '-';
+                                    }),
+                                Column::make('lokasi_masuk')
+                                    ->heading('Lokasi Clock In')
+                                    ->getStateUsing(fn($record) => $record->details->first()?->workLocation->name ?? '-'),
+                            ])
+                    ]),
             ])
             ->actions([
                 Action::make('history')
