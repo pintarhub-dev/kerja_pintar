@@ -44,20 +44,4 @@ class AttendanceSummary extends Model
     {
         return $this->hasMany(AttendanceDetail::class, 'attendance_summary_id');
     }
-
-    // Helper Scope untuk mempermudah reporting
-    public function scopePresent($query)
-    {
-        return $query->where('status', 'present');
-    }
-
-    public function scopeAlpha($query)
-    {
-        return $query->where('status', 'alpha');
-    }
-
-    public function scopeLate($query)
-    {
-        return $query->where('late_minutes', '>', 0);
-    }
 }
