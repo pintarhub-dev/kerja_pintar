@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         // $schedule->command('inspire')->hourly();
 
+        Schedule::command('schedule:generate --days=7')->dailyAt('01:00')->runInBackground();
         Schedule::command('attendance:auto-clockout')->dailyAt('23:55');
         Schedule::command('attendance:auto-alpha')->dailyAt('23:59');
     }
