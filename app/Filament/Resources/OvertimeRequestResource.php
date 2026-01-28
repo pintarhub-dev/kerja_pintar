@@ -403,6 +403,50 @@ class OvertimeRequestResource extends Resource
                             }
                         });
                     }),
+
+                Tables\Actions\Action::make('reject')
+                    ->label('Tolak')
+                    ->icon('heroicon-m-x-mark')
+                    ->color('danger')
+                    ->form([Forms\Components\Textarea::make('rejection_reason')->required()])
+                    ->visible(function (OvertimeRequest $record) {
+                        $user = auth()->user();
+                        if (!$user) return false;
+
+                        // Jangan tampilkan kalau sudah final
+                        if (in_array($record->status, ['rejected', 'cancelled', 'approved_by_hr'])) {
+                            return false;
+                        }
+
+                        $employee = $user->employee;
+                        $requestEmployee = $record->employee;
+
+                        // HR
+                        if ($employee?->is_hr == 1) {
+                            return true;
+                        }
+
+                        // Supervisor
+                        if ($requestEmployee?->employee_id_supervisor === $employee?->id) {
+                            return true;
+                        }
+
+                        // Manager
+                        if ($requestEmployee?->employee_id_manager === $employee?->id) {
+                            return true;
+                        }
+
+                        return false;
+                    })
+                    ->action(function (OvertimeRequest $record, array $data) {
+                        $record->update([
+                            'status' => 'rejected',
+                            'rejection_reason' => $data['rejection_reason'],
+                            'approved_by' => auth()->user()->id,
+                            'approved_at' => now(),
+                        ]);
+                        Notification::make()->title('Permohonan Ditolak')->danger()->send();
+                    }),
             ]);
     }
 
