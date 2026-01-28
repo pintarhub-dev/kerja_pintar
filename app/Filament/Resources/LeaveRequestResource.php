@@ -11,6 +11,8 @@ use App\Models\LeaveRequest;
 use App\Models\LeaveBalance;
 use App\Models\LeaveType;
 use App\Models\AttendanceSummary;
+use App\Models\EmployeeScheduleAssignment;
+use App\Models\ScheduleOverride;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -49,6 +51,7 @@ class LeaveRequestResource extends Resource
                                 titleAttribute: 'full_name',
                                 modifyQueryUsing: function (Builder $query) {
                                     $query->whereNotIn('employment_status', ['resigned', 'terminated', 'retired']);
+                                    $query->whereHas('scheduleAssignments');
                                 }
                             )
                             ->getOptionLabelFromRecordUsing(
@@ -56,7 +59,6 @@ class LeaveRequestResource extends Resource
                             )
                             ->searchable(['full_name', 'nik'])
                             ->preload()
-                            ->default(fn() => auth()->user()?->employee?->id)
                             ->required(),
 
                         Forms\Components\Select::make('leave_type_id')
@@ -352,6 +354,8 @@ class LeaveRequestResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn(LeaveRequest $record) => $record->status === 'pending'),
 
                 // =========================================================
                 // 1. APPROVE SUPERVISOR (Layer 1)
@@ -472,6 +476,45 @@ class LeaveRequestResource extends Resource
                             $endDate = Carbon::parse($record->end_date);
 
                             while ($startDate->lte($endDate)) {
+                                $currentDate = $startDate->toDateString();
+
+                                $shiftId = null;
+                                $patternId = null;
+                                $scheduleIn = null;
+                                $scheduleOut = null;
+
+                                // 1. Cek Override (Prioritas)
+                                $override = ScheduleOverride::where('employee_id', $record->employee_id)
+                                    ->where('date', $currentDate)
+                                    ->first();
+
+                                if ($override) {
+                                    if ($override->shift) {
+                                        $shiftId = $override->shift_id;
+                                        $scheduleIn = $override->shift->start_time;
+                                        $scheduleOut = $override->shift->end_time;
+                                    }
+                                } else {
+                                    // 2. Cek Pattern Reguler
+                                    $assignment = EmployeeScheduleAssignment::where('employee_id', $record->employee_id)
+                                        ->whereDate('effective_date', '<=', $currentDate)
+                                        ->orderBy('effective_date', 'desc')
+                                        ->first();
+
+                                    if ($assignment) {
+                                        $patternId = $assignment->schedule_pattern_id;
+                                        // Asumsi Model Assignment punya method getShiftOnDate
+                                        $shift = $assignment->getShiftOnDate($currentDate);
+
+                                        if ($shift) {
+                                            $shiftId = $shift->id;
+                                            if (!$shift->is_flexible) {
+                                                $scheduleIn = $shift->start_time;
+                                                $scheduleOut = $shift->end_time;
+                                            }
+                                        }
+                                    }
+                                }
                                 AttendanceSummary::updateOrCreate(
                                     [
                                         'tenant_id' => $record->tenant_id,
@@ -480,8 +523,10 @@ class LeaveRequestResource extends Resource
                                     ],
                                     [
                                         'status' => $attendanceStatus,
-                                        // 'clock_in' => null,
-                                        // 'clock_out' => null,
+                                        'schedule_id' => $patternId,
+                                        'shift_id' => $shiftId,
+                                        'schedule_in' => $scheduleIn,
+                                        'schedule_out' => $scheduleOut,
                                         'late_minutes' => 0,
                                         'early_leave_minutes' => 0,
                                         'overtime_minutes' => 0,
