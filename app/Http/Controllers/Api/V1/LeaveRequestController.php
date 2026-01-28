@@ -168,7 +168,10 @@ class LeaveRequestController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Terjadi kesalahan sistem.', 'error' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem.',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
 
@@ -182,11 +185,17 @@ class LeaveRequestController extends Controller
             ->first();
 
         if (!$leaveRequest) {
-            return response()->json(['message' => 'Data tidak ditemukan.'], 404);
+            return response()->json([
+                'success' => false,
+                'message' => 'Data tidak ditemukan.'
+            ], 404);
         }
 
         if ($leaveRequest->status !== 'pending') {
-            return response()->json(['message' => 'Pengajuan yang sudah diproses tidak dapat dibatalkan.'], 403);
+            return response()->json([
+                'success' => false,
+                'message' => 'Pengajuan tidak dapat dibatalkan karena sudah diproses (Disetujui/Ditolak)'
+            ], 403);
         }
 
         $leaveRequest->delete();

@@ -8,6 +8,7 @@ use App\Models\AttendanceSummary;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class OvertimeRequestController extends Controller
 {
@@ -52,7 +53,10 @@ class OvertimeRequestController extends Controller
             ->exists();
 
         if ($exists) {
-            return response()->json(['message' => 'Anda sudah memiliki pengajuan lembur pada tanggal ini.'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda sudah memiliki pengajuan lembur pada tanggal ini.'
+            ], 422);
         }
 
         // --- VALIDASI 2: CEK ABSENSI (JEBAKAN UTAMA) ---
@@ -64,13 +68,17 @@ class OvertimeRequestController extends Controller
         // Syarat A: Harus ada data absen, jadwal pulang, dan jam pulang aktual
         if (!$summary || !$summary->schedule_out || !$summary->clock_out) {
             return response()->json([
+                'success' => false,
                 'message' => 'Data kehadiran tidak lengkap. Pastikan Anda sudah Clock Out sebelum mengajukan lembur.'
             ], 422);
         }
 
         // Syarat B: Status tidak boleh Cuti/Sakit/Izin/Alpha
         if (in_array($summary->status, ['leave', 'sick', 'permit', 'alpha'])) {
-            return response()->json(['message' => 'Tidak bisa lembur saat status Cuti/Izin.'], 422);
+            return response()->json([
+                'success' => false,
+                'message' => 'Tidak bisa lembur saat status Cuti/Sakit/Izin/Alpha.'
+            ], 422);
         }
 
         $timezone = $summary->employee->workLocation->timezone ?? 'Asia/Jakarta';
@@ -93,6 +101,7 @@ class OvertimeRequestController extends Controller
         // --- JEBAKAN 3: CEK APAKAH BENAR PULANG TELAT? ---
         if ($actualOut->lte($scheduleOut)) {
             return response()->json([
+                'success' => false,
                 'message' => 'Berdasarkan data absensi, Anda pulang tepat waktu atau lebih awal. Tidak bisa mengajukan lembur.'
             ], 422);
         }
@@ -102,6 +111,7 @@ class OvertimeRequestController extends Controller
 
         if ($requestedDuration > $maxAllowedMinutes) {
             return response()->json([
+                'success' => false,
                 'message' => "Durasi yang diajukan ($requestedDuration menit) melebihi durasi keterlambatan aktual ($maxAllowedMinutes menit).",
                 'meta' => [
                     'max_allowed' => $maxAllowedMinutes,
@@ -111,21 +121,33 @@ class OvertimeRequestController extends Controller
             ], 422);
         }
 
-        // --- LOLOS SEMUA VALIDASI -> SIMPAN ---
-        $overtime = OvertimeRequest::create([
-            'tenant_id' => $employee->tenant_id,
-            'employee_id' => $employee->id,
-            'date' => $date,
-            'duration_minutes' => $requestedDuration,
-            'reason' => $request->reason,
-            'status' => 'pending'
-        ]);
+        try {
+            DB::beginTransaction();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Pengajuan lembur berhasil dikirim.',
-            'data' => $overtime
-        ], 201);
+            // --- LOLOS SEMUA VALIDASI -> SIMPAN ---
+            $overtime = OvertimeRequest::create([
+                'tenant_id' => $employee->tenant_id,
+                'employee_id' => $employee->id,
+                'date' => $date,
+                'duration_minutes' => $requestedDuration,
+                'reason' => $request->reason,
+                'status' => 'pending'
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pengajuan lembur berhasil dikirim.',
+                'data' => $overtime
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Terjadi kesalahan sistem.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     // BATALKAN PENGAJUAN LEMBUR (DELETE/CANCEL)
