@@ -33,6 +33,11 @@ class OvertimeRequestResource extends Resource
     protected static ?string $navigationLabel = 'Permohonan Lembur';
     protected static ?int $navigationSort = 11;
 
+    public static function canAccess(): bool
+    {
+        return false;
+    }
+
     public static function form(Form $form): Form
     {
         return $form

@@ -44,10 +44,11 @@ Route::prefix('v1')->group(function () {
             Route::delete('requests/{id}', 'destroy');
         });
 
-        Route::prefix('overtimes')->controller(OvertimeRequestController::class)->group(function () {
-            Route::get('requests', 'index');
-            Route::post('requests', 'store');
-            Route::delete('requests/{id}', 'destroy');
-        });
+        // FITUR UNTUK KEMBANGAN MASA DEPAN
+        // Route::prefix('overtimes')->controller(OvertimeRequestController::class)->group(function () {
+        //     Route::get('requests', 'index');
+        //     Route::post('requests', 'store');
+        //     Route::delete('requests/{id}', 'destroy');
+        // });
     });
 });
