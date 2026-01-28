@@ -17,13 +17,6 @@ class EditEmployee extends EditRecord
         return $this->getResource()::getUrl('index');
     }
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            Actions\DeleteAction::make(),
-        ];
-    }
-
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $user = User::find($data['user_id']);
