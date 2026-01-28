@@ -143,8 +143,9 @@ class LeaveRequestController extends Controller
 
             $attachmentPath = null;
             if ($request->hasFile('attachment')) {
-                // Simpan di folder yang sama dengan Filament
-                $attachmentPath = $request->file('attachment')->store('leave_attachments', 'public');
+                $attachmentPath = $request->file('attachment')
+                    ->store('leave_attachments/' . $employee->tenant_id . '/' .
+                        date('Y-m'), 'public');
             }
 
             $leaveRequest = LeaveRequest::create([
