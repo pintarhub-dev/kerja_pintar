@@ -92,9 +92,9 @@ class LeaveTypeResource extends Resource
                                     ->helperText('Contoh: Surat Dokter untuk Sakit.')
                                     ->default(false),
 
-                                Forms\Components\Toggle::make('is_carry_forward')
-                                    ->label('Bisa Carry Forward (Sisa saldo dibawa ke tahun depan)')
-                                    ->default(false),
+                                // Forms\Components\Toggle::make('is_carry_forward')
+                                //     ->label('Bisa Carry Forward (Sisa saldo dibawa ke tahun depan)')
+                                //     ->default(false),
                             ]),
                     ]),
             ]);
