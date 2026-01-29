@@ -37,7 +37,7 @@ class LeaveBalanceResource extends Resource
                                 titleAttribute: 'full_name',
                                 modifyQueryUsing: function (Builder $query) {
                                     $query->whereNotIn('employment_status', ['resigned', 'terminated', 'retired']);
-                                    // $query->whereHas('scheduleAssignments');
+                                    $query->whereHas('scheduleAssignments');
                                 }
                             )
                             ->getOptionLabelFromRecordUsing(
@@ -182,7 +182,7 @@ class LeaveBalanceResource extends Resource
 
                         // Ambil semua karyawan aktif yang sudah di assign schedule
                         $employees = Employee::whereNotIn('employment_status', ['resigned', 'terminated', 'retired'])
-                            // ->whereHas('scheduleAssignments')
+                            ->whereHas('scheduleAssignments')
                             ->get();
 
                         $count = 0;
