@@ -34,6 +34,9 @@ class LatestAttendanceWidget extends BaseWidget
                 Tables\Columns\TextColumn::make('clock_in')
                     ->label('Jam Masuk')
                     ->time('H:i')
+                    ->timezone(function (AttendanceSummary $record) {
+                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
+                    })
                     ->badge()
                     ->color('info'),
 
@@ -46,6 +49,9 @@ class LatestAttendanceWidget extends BaseWidget
                 Tables\Columns\TextColumn::make('clock_out')
                     ->label('Jam Pulang')
                     ->time('H:i')
+                    ->timezone(function (AttendanceSummary $record) {
+                        return $record->employee->workLocation->timezone ?? 'Asia/Jakarta';
+                    })
                     ->placeholder('Belum Pulang'),
             ])
             ->paginated(false); // Hilangkan pagination biar compact
