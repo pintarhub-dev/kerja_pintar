@@ -113,7 +113,7 @@ class LeaveRequestController extends Controller
 
         // Cek Attachment Wajib?
         if ($leaveType->requires_file && !$request->hasFile('attachment')) {
-            return response()->json(['message' => 'Jenis cuti ini mewajibkan upload lampiran (Surat Dokter/dll).'], 422);
+            return response()->json(['message' => 'Jenis cuti ini mewajibkan upload lampiran (Surat Dokter).'], 422);
         }
 
         // 3. Cek Saldo (Jika tipe cuti memotong kuota)
