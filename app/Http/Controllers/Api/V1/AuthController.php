@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -112,6 +113,59 @@ class AuthController extends Controller
             'latitude'          => $emp->workLocation ? $emp->workLocation->latitude : null,
             'longitude'         => $emp->workLocation ? $emp->workLocation->longitude : null,
         ];
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+        $employee = $user->employee;
+
+        // 1. Validasi Input
+        $request->validate([
+            // Data Employee
+            'nickname' => 'nullable|string|max:20',
+            'phone'    => 'nullable|string|max:20',
+            'address'  => 'nullable|string|max:500',
+            // Data User
+            'avatar'   => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // 2. Update Data Employee (Personal Info)
+            $employee->update([
+                'nickname' => $request->nickname ?? $employee->nickname,
+                'phone'    => $request->phone ?? $employee->phone,
+                'address'  => $request->address ?? $employee->address,
+            ]);
+
+            // 3. Update Avatar (Jika ada upload baru)
+            if ($request->hasFile('avatar')) {
+                // Hapus avatar lama jika ada (dan bukan url eksternal)
+                if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
+                    Storage::disk('public')->delete($user->avatar);
+                }
+                $path = $request->file('avatar')->store("avatars/{$user->tenant_id}/{$user->id}", 'public');
+                $user->update(['avatar' => $path]);
+            }
+
+            DB::commit();
+
+            // 4. Return data profile terbaru
+            $user->load(['employee.workLocation']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profil berhasil diperbarui.',
+                'data'    => [
+                    'user' => $this->formatUserProfile($user)
+                ]
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal update profil', 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function logout(Request $request)
