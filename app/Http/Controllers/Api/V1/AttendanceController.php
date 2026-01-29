@@ -10,6 +10,7 @@ use App\Http\Resources\Api\V1\AttendanceResource;
 use App\Models\AttendanceSummary;
 use App\Models\EmployeeScheduleAssignment;
 use App\Models\ScheduleOverride;
+use App\Models\WorkLocation;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 
@@ -263,7 +264,7 @@ class AttendanceController extends Controller
         $currentLocationId = $employee->work_location_id;
 
         if ($employee->is_flexible_location) {
-            $locations = \App\Models\WorkLocation::all();
+            $locations = WorkLocation::all();
             foreach ($locations as $loc) {
                 $distance = $this->calculateDistance(
                     $request->latitude,
