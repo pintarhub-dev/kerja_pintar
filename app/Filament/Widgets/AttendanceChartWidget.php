@@ -13,6 +13,7 @@ class AttendanceChartWidget extends ChartWidget
     protected static ?string $heading = 'Tren Kehadiran 7 Hari Terakhir';
     protected static ?int $sort = 2;
     protected int | string | array $columnSpan = 'full';
+    protected static ?string $pollingInterval = '15s';
 
     protected function getData(): array
     {

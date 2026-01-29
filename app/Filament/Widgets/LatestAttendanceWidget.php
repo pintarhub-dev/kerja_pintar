@@ -13,6 +13,7 @@ class LatestAttendanceWidget extends BaseWidget
     protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
     protected static ?string $heading = 'Aktivitas Absensi Terbaru (Hari Ini)';
+    protected static ?string $pollingInterval = '15s';
 
     public function table(Table $table): Table
     {
