@@ -82,6 +82,7 @@ class EmployeeSeeder extends Seeder
             'phone' => '088256255111',
             'address' => 'Jl. Ica',
             'identity_number' => '317404180290004',
+            'employee_id_supervisor' => 1,
         ]);
 
         Employee::create([
@@ -100,6 +101,8 @@ class EmployeeSeeder extends Seeder
             'phone' => '081282771009',
             'address' => 'Jl. Cia',
             'identity_number' => '317404180297004',
+            'employee_id_supervisor' => 2,
+            'employee_id_manager' => 1,
         ]);
 
         Employee::create([
@@ -116,6 +119,8 @@ class EmployeeSeeder extends Seeder
             'phone' => '085692421602',
             'address' => 'Jl. Aby',
             'identity_number' => '317404180292004',
+            'employee_id_supervisor' => 3,
+            'employee_id_manager' => 2,
         ]);
     }
 }
