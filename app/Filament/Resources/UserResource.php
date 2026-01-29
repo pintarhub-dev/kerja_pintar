@@ -53,7 +53,7 @@ class UserResource extends Resource
                             ->avatar()
                             ->image()
                             ->disk('public')
-                            ->directory('avatars')
+                            ->directory(fn($record) => 'avatars/' . $record->tenant_id . '/' . $record->id)
                             ->columnSpanFull(),
 
                         // --- TENANT ID (PERUSAHAAN) ---
