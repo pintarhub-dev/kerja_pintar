@@ -93,6 +93,7 @@ class EmployeeSeeder extends Seeder
             'job_title' => 'Staff HRD',
             'department' => 'HR',
             'is_access_web' => 1,
+            'is_hr' => 1,
             'is_attendance_required' => 0,
             'join_date' => '2026-01-20',
             'place_of_birth' => 'Bandung',
