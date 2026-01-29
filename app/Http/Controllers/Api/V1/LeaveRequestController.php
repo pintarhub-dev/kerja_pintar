@@ -180,7 +180,7 @@ class LeaveRequestController extends Controller
     public function update(Request $request, $id)
     {
         $user = $request->user();
-        $employee = $request->user()->employee;
+        $employee = $user->employee;
 
         // 1. Cari Data & Cek Kepemilikan
         $leaveRequest = LeaveRequest::where('id', $id)
