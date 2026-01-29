@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveRequest;
 use App\Models\LeaveBalance;
 use App\Models\LeaveType;
+use App\Models\AttendanceSummary;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,19 @@ class LeaveRequestController extends Controller
 
         if ($isOverlap) {
             return response()->json(['message' => 'Anda sudah memiliki pengajuan cuti pada rentang tanggal ini.'], 422);
+        }
+
+        // 1.5. Cek Data Absensi (Clock In)
+        // Mencegah cuti di hari dimana karyawan SUDAH masuk kerja
+        $hasAttendance = AttendanceSummary::where('employee_id', $employee->id)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->whereNotNull('clock_in')
+            ->first();
+
+        if ($hasAttendance) {
+            return response()->json([
+                'message' => 'Pengajuan ditolak. Anda tercatat sudah hadir (Clock In) pada tanggal ' . Carbon::parse($hasAttendance->date)->format('d-m-Y') . '.',
+            ], 422);
         }
 
         $leaveType = LeaveType::find($leaveTypeId);
