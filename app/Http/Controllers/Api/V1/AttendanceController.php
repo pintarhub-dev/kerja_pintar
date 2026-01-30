@@ -352,6 +352,7 @@ class AttendanceController extends Controller
             'clock_in_time'      => $now->toTimeString(),
             'clock_in_latitude'  => $request->latitude,
             'clock_in_longitude' => $request->longitude,
+            'clock_in_device_id' => $request->device_id,
             'clock_in_image'     => $imagePath,
         ]);
 
