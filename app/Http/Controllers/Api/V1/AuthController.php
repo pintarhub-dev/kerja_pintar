@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use PDO;
 
 class AuthController extends Controller
 {
@@ -37,6 +38,15 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Akun Anda tidak terhubung dengan data Karyawan.',
+            ], 403);
+        }
+
+        if ($user->employee->is_attendance_required == 0) {
+            $user->tokens()->delete();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Mohon maaf, akun Anda disetting tidak memerlukan absensi mobile.',
             ], 403);
         }
 
