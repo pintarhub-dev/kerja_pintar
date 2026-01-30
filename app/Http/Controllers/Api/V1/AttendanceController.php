@@ -111,11 +111,82 @@ class AttendanceController extends Controller
         ]);
     }
 
+    public function currentStatus(Request $request)
+    {
+        $user = $request->user();
+        $employee = $user->employee->load('workLocation');
+
+        if (!$employee) {
+            return $this->errorResponse('Data Karyawan belum terhubung.', 404);
+        }
+
+        $today = now()->toDateString();
+        $summary = AttendanceSummary::where('employee_id', $employee->id)
+            ->where('date', $today)
+            ->first();
+
+        // 1. Tentukan Timezone User
+        $timezone = $employee->workLocation->timezone ?? 'Asia/Jakarta';
+
+        $tzLabel = match ($timezone) {
+            'Asia/Jakarta' => 'WIB',
+            'Asia/Makassar' => 'WITA',
+            'Asia/Jayapura' => 'WIT',
+            default => $timezone,
+        };
+
+        $clockInDisplay = $summary?->clock_in
+            ? \Carbon\Carbon::parse($summary->clock_in)
+            ->setTimezone($timezone)
+            ->format('H:i') . " " . $tzLabel
+            : '--:--';
+
+        $clockOutDisplay = $summary?->clock_out
+            ? \Carbon\Carbon::parse($summary->clock_out)
+            ->setTimezone($timezone)
+            ->format('H:i') . " " . $tzLabel
+            : '--:--';
+
+        $statusCode = 'not_present';
+        $message = 'Anda belum absen hari ini.';
+
+        if ($summary) {
+            if ($summary->clock_in && !$summary->clock_out) {
+                $statusCode = 'checked_in';
+                $message = 'Selamat bekerja! Jangan lupa absen pulang.';
+            } elseif ($summary->clock_out) {
+                $statusCode = 'checked_out';
+                $message = 'Terima kasih, hati-hati di jalan!';
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'status_code' => $statusCode,
+                'message' => $message,
+                'employee_name' => $employee->full_name,
+                'clock_in_display' => $clockInDisplay,
+                'clock_out_display' => $clockOutDisplay,
+            ]
+        ]);
+    }
+
     /**
      * API Clock In
      */
     public function clockIn(ClockInRequest $request): JsonResponse
     {
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'latitude' => 'required',
+            'longitude' => 'required',
+            'image' => 'required|image|max:5120', // Max 5MB
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422);
+        }
+
         $user = $request->user();
         $employee = $user->employee;
 
@@ -458,18 +529,24 @@ class AttendanceController extends Controller
             $timezone = $employee->workLocation->timezone ?? 'Asia/Jakarta';
 
             // 1. Konstruksi Jadwal Pulang yang Valid
-            $dateString = $summary->date instanceof Carbon
+            $dateString = $summary->date instanceof \Carbon\Carbon
                 ? $summary->date->format('Y-m-d')
-                : Carbon::parse($summary->date)->format('Y-m-d');
+                : \Carbon\Carbon::parse($summary->date)->format('Y-m-d');
+
+            $scheduleTimeOnly = \Carbon\Carbon::parse($summary->schedule_out)->format('H:i:s');
 
             // Gabungkan Tanggal Summary + Jam Jadwal Pulang
-            $scheduleOut = Carbon::parse("{$dateString} {$summary->schedule_out}", $timezone);
+            $scheduleOut = \Carbon\Carbon::parse("{$dateString} {$scheduleTimeOnly}", $timezone);
 
             // Handle Shift Malam (Cross Day)
             // Jika Jadwal Pulang LEBIH KECIL dari Jadwal Masuk (misal Masuk 21:00, Pulang 06:00)
             // Maka Jadwal Pulang adalah BESOKNYA (+1 Hari)
-            if ($summary->schedule_in && $summary->schedule_out < $summary->schedule_in) {
-                $scheduleOut->addDay();
+            if ($summary->schedule_in) {
+                $scheduleInTime = \Carbon\Carbon::parse($summary->schedule_in)->format('H:i:s');
+                // Bandingkan string jamnya saja (misal "06:00:00" < "21:00:00")
+                if ($scheduleTimeOnly < $scheduleInTime) {
+                    $scheduleOut->addDay();
+                }
             }
 
             // 2. Ambil Waktu Sekarang (Actual Out) sesuai Timezone

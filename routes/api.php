@@ -32,6 +32,7 @@ Route::prefix('v1')->group(function () {
         Route::post('user/update', [AuthController::class, 'updateProfile']);
 
         Route::prefix('attendance')->controller(AttendanceController::class)->group(function () {
+            Route::get('current-status', 'currentStatus');
             Route::get('history', 'history');
             Route::post('clock-in', 'clockIn');
             Route::post('clock-out', 'clockOut');
