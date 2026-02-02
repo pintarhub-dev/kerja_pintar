@@ -50,7 +50,7 @@ class LeaveBalanceController extends Controller
                 'leave_type_name' => $type->name,
                 'code' => $type->code,
                 'entitlement' => $balance ? (int)$balance->entitlement : 0,
-                'carried_over' => (int) $balance->carried_over,
+                'carried_over' => $balance ? (int) $balance->carried_over : 0,
                 'taken' => $balance ? (int)$balance->taken : 0,
                 'remaining' => $remaining,
                 'deducts_quota' => (bool) $type->deducts_quota,
