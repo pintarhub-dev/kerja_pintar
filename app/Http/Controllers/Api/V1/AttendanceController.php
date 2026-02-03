@@ -23,7 +23,7 @@ class AttendanceController extends Controller
 
         // 1. Load relasi Employee seperlunya saja (Lokasi & Shift Master)
         // Jangan load attendanceSummaries disini, berat!
-        $employee = $user->employee->load(['workLocation', 'shift']);
+        $employee = $request->user()->employee->load(['workLocation', 'attendanceSummaries.details.workLocation']);
 
         // Validasi
         $request->validate([
@@ -36,7 +36,9 @@ class AttendanceController extends Controller
 
         // 2. Query Data
         $histories = AttendanceSummary::where('employee_id', $employee->id)
-            ->with(['shift']) // Eager load relasi shift pada summary
+            ->with(['shift', 'details' => function ($q) {
+                $q->orderBy('created_at', 'asc');
+            }])
             ->whereMonth('date', $month)
             ->whereYear('date', $year)
             ->orderBy('date', 'desc')
@@ -79,6 +81,66 @@ class AttendanceController extends Controller
                     $workHoursStr = sprintf('%02d Jam %02d Menit', $hours, $minutes);
                 }
 
+                $timeline = [];
+
+                // Cek apakah ada data detail (anak tabel)
+                if ($item->details) {
+                    foreach ($item->details as $detail) {
+                        $timezone = $employee->workLocation->timezone ?? 'Asia/Jakarta';
+                        $tzLabel = match ($timezone) {
+                            'Asia/Jakarta' => 'WIB',
+                            'Asia/Makassar' => 'WITA',
+                            'Asia/Jayapura' => 'WIT',
+                            default => $timezone,
+                        };
+                        $clockInDisplay = $detail?->clock_in_time
+                            ? \Carbon\Carbon::parse($detail->clock_in_time)
+                            ->setTimezone($timezone)
+                            ->format('H:i') . " " . $tzLabel
+                            : '--:--';
+
+                        $clockOutDisplay = $detail?->clock_out_time
+                            ? \Carbon\Carbon::parse($detail->clock_out_time)
+                            ->setTimezone($timezone)
+                            ->format('H:i') . " " . $tzLabel
+                            : '--:--';
+
+                        // 1. PUSH EVENT: MASUK
+                        if ($detail->clock_in_time) {
+                            $timeline[] = [
+                                'id'        => $detail->id . '_in', // Unik ID dummy
+                                'type'      => 'clock_in', // Penanda tipe
+                                'title'     => 'Absen Masuk',
+                                'time'      => $clockInDisplay,
+                                'latitude'  => $detail->clock_in_latitude,
+                                'longitude' => $detail->clock_in_longitude,
+                                'device_id' => $detail->clock_in_device_id,
+                                'image_url' => $detail->clock_in_image ? asset('storage/' . $detail->clock_in_image) : null,
+                                'work_location' => $detail->workLocation->name ?? 'Lokasi Tidak Diketahui',
+                            ];
+                        }
+
+                        // 2. PUSH EVENT: PULANG
+                        if ($detail->clock_out_time) {
+                            $timeline[] = [
+                                'id'        => $detail->id . '_out',
+                                'type'      => 'clock_out',
+                                'title'     => 'Absen Pulang',
+                                'time'      => $clockOutDisplay,
+                                'latitude'  => $detail->clock_out_latitude,
+                                'longitude' => $detail->clock_out_longitude,
+                                'device_id' => $detail->clock_out_device_id,
+                                'image_url' => $detail->clock_out_image ? asset('storage/' . $detail->clock_out_image) : null,
+                                'work_location' => $detail->workLocation->name ?? 'Lokasi Tidak Diketahui',
+                            ];
+                        }
+                    }
+                }
+
+                usort($timeline, function ($a, $b) {
+                    return strcmp($a['time'], $b['time']);
+                });
+
                 return [
                     'id'            => $item->id,
                     'date'          => $item->date,
@@ -92,6 +154,7 @@ class AttendanceController extends Controller
                     'work_hours'    => $workHoursStr,
                     'work_minutes'  => $actualMinutes,
                     'break_deducted' => isset($deductedBreak) ? $deductedBreak : 0,
+                    'logs'          => $timeline,
                 ];
             });
 
