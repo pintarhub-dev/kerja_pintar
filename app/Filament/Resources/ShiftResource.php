@@ -11,6 +11,7 @@ use Filament\Forms\Set;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Notifications\Notification;
 
 class ShiftResource extends Resource
 {
@@ -24,12 +25,21 @@ class ShiftResource extends Resource
     {
         return $form
             ->schema([
+                Forms\Components\Placeholder::make('locked_warning')
+                    ->label('PERHATIAN')
+                    ->content('Shift ini sedang digunakan oleh karyawan atau memiliki riwayat absensi. Data tidak dapat diubah untuk menjaga konsistensi laporan.')
+                    ->visible(fn($record) => $record && $record->isLocked()) // Hanya muncul jika terkunci
+                    ->columnSpanFull()
+                    ->extraAttributes(['class' => 'bg-red-50 text-red-600 p-4 rounded-lg font-bold']),
+
                 Forms\Components\Section::make('Identitas Shift')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->label('Nama Shift')
                             ->placeholder('Contoh: Shift Pagi, OFF Sabtu, Shift Malam')
-                            ->required(),
+                            ->required()
+                            ->disabled(fn($record) => $record?->isLocked())
+                            ->dehydrated(),
 
                         // 1. TOGGLE LIBUR (Master Switch)
                         Forms\Components\Toggle::make('is_day_off')
@@ -45,7 +55,9 @@ class ShiftResource extends Resource
                                     $set('end_time', null);
                                     $set('daily_target_minutes', null);
                                 }
-                            }),
+                            })
+                            ->disabled(fn($record) => $record?->isLocked())
+                            ->dehydrated(),
                     ]),
 
                 Forms\Components\Section::make('Konfigurasi Waktu')
@@ -57,7 +69,9 @@ class ShiftResource extends Resource
                             ->label('Shift Flexible?')
                             ->helperText('Jika aktif, jam masuk/pulang diabaikan, yang penting durasi kerja.')
                             ->default(false)
-                            ->live(),
+                            ->live()
+                            ->disabled(fn($record) => $record?->isLocked())
+                            ->dehydrated(),
 
                         // 3. INPUT JAM (FIXED)
                         // Muncul jika: BUKAN Libur DAN BUKAN Flexible
@@ -67,12 +81,14 @@ class ShiftResource extends Resource
                                     ->label('Jam Masuk')
                                     ->seconds(false)
                                     ->required() // Wajib jika muncul
-                                    ->dehydrated(), // Simpan ke DB
+                                    ->disabled(fn($record) => $record?->isLocked())
+                                    ->dehydrated(),
 
                                 Forms\Components\TimePicker::make('end_time')
                                     ->label('Jam Pulang')
                                     ->seconds(false)
                                     ->required()
+                                    ->disabled(fn($record) => $record?->isLocked())
                                     ->dehydrated(),
                             ])
                             ->hidden(fn(Get $get) => $get('is_flexible')), // Sembunyi jika flexible
@@ -87,6 +103,7 @@ class ShiftResource extends Resource
                                     ->default(480)
                                     ->helperText('480 menit = 8 Jam')
                                     ->required()
+                                    ->disabled(fn($record) => $record?->isLocked())
                                     ->dehydrated(),
                             ])
                             ->visible(fn(Get $get) => $get('is_flexible')), // Muncul hanya jika flexible
@@ -94,12 +111,16 @@ class ShiftResource extends Resource
                         Forms\Components\TextInput::make('break_duration_minutes')
                             ->label('Waktu istirahat (Menit)')
                             ->numeric()
-                            ->default(60),
+                            ->default(60)
+                            ->disabled(fn($record) => $record?->isLocked())
+                            ->dehydrated(),
 
                         Forms\Components\TextInput::make('late_tolerance_minutes')
                             ->label('Toleransi Terlambat (Menit)')
                             ->numeric()
-                            ->default(0),
+                            ->default(0)
+                            ->disabled(fn($record) => $record?->isLocked())
+                            ->dehydrated(),
                     ]),
             ]);
     }
@@ -178,11 +199,30 @@ class ShiftResource extends Resource
                     ->query(fn($query) => $query->where('is_day_off', true)),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->icon(fn($record) => $record->isLocked() ? 'heroicon-o-eye' : 'heroicon-m-pencil-square')
+                    ->label(fn($record) => $record->isLocked() ? 'Detail' : 'Edit'),
+                Tables\Actions\DeleteAction::make()
+                    ->disabled(fn($record) => $record->isLocked())
+                    ->tooltip(fn($record) => $record->isLocked() ? 'Shift sedang digunakan, tidak bisa dihapus.' : null),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            $records->each(function ($record) {
+                                if (!$record->isLocked()) {
+                                    $record->delete();
+                                }
+                            });
+
+                            Notification::make()
+                                ->title('Proses Selesai')
+                                ->body('Hanya shift yang tidak terpakai yang dihapus.')
+                                ->success()
+                                ->send();
+                        }),
+                ]),
             ]);
     }
 

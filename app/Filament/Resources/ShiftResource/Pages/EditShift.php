@@ -19,7 +19,17 @@ class EditShift extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            Actions\DeleteAction::make()
+                ->hidden(fn() => $this->record->isLocked()),
         ];
+    }
+
+    protected function getFormActions(): array
+    {
+        if ($this->record->isLocked()) {
+            return [];
+        }
+
+        return parent::getFormActions();
     }
 }
