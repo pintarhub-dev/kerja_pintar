@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Blameable;
+use Illuminate\Support\Facades\Storage;
 
 class Tenant extends Model
 {
@@ -28,6 +29,23 @@ class Tenant extends Model
             if (empty($tenant->subscription_expired_at)) {
                 $tenant->subscription_expired_at = now()->addMonth();
             }
+        });
+
+        static::updating(function ($tenant) {
+            if ($tenant->isDirty('logo')) {
+                $oldLogo = $tenant->getOriginal('logo');
+                if ($oldLogo && Storage::disk('public')->exists($oldLogo)) {
+                    Storage::disk('public')->delete($oldLogo);
+                }
+            }
+        });
+
+        static::deleting(function ($tenant) {
+            if ($tenant->avatar && Storage::disk('public')->exists($tenant->avatar)) {
+                Storage::disk('public')->delete($tenant->avatar);
+            }
+            $tenant->user?->delete();
+            $tenant->employee?->delete();
         });
     }
 
