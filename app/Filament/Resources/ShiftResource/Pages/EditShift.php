@@ -12,7 +12,6 @@ class EditShift extends EditRecord
 
     protected function getRedirectUrl(): string
     {
-        // Biar habis save balik ke list
         return $this->getResource()::getUrl('index');
     }
 

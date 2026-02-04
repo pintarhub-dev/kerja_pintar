@@ -133,7 +133,7 @@ class ShiftResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                // Kolom Status (Badge)
+                // Kolom Status
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipe Shift')
                     ->sortable()
@@ -144,13 +144,13 @@ class ShiftResource extends Resource
                         return 'Fixed Time';
                     })
                     ->color(fn(string $state): string => match ($state) {
-                        'Libur / OFF' => 'danger',   // Merah
-                        'Flexible' => 'warning',     // Kuning
-                        'Fixed Time' => 'success',   // Hijau
+                        'Libur / OFF' => 'danger',
+                        'Flexible' => 'warning',
+                        'Fixed Time' => 'success',
                         default => 'gray',
                     }),
 
-                // Kolom Jam Kerja (Smart Display)
+                // Kolom Jam Kerja
                 Tables\Columns\TextColumn::make('working_hours')
                     ->label('Jam Kerja')
                     ->getStateUsing(function ($record) {

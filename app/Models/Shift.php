@@ -19,7 +19,6 @@ class Shift extends Model
     public function isLocked(): bool
     {
         // Cek 1: Apakah Shift ini bagian dari Pattern yang SEDANG dipakai karyawan?
-        // Asumsi: Ada tabel pivot/detail 'schedule_pattern_details' yang menghubungkan Pattern <-> Shift
         $isAssigned = DB::table('schedule_pattern_details')
             ->join('employee_schedule_assignments', 'schedule_pattern_details.schedule_pattern_id', '=', 'employee_schedule_assignments.schedule_pattern_id')
             ->where('schedule_pattern_details.shift_id', $this->id)
