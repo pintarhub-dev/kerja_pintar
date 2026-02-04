@@ -13,6 +13,40 @@ class Tenant extends Model
     use Blameable;
     protected $guarded = ['id'];
 
+    protected $casts = [
+        'subscription_expired_at' => 'datetime',
+    ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Tenant $tenant) {
+            // Default saat daftar: Plan Free, Expired 1 bulan dari sekarang
+            if (empty($tenant->subscription_plan)) {
+                $tenant->subscription_plan = 'free';
+            }
+
+            if (empty($tenant->subscription_expired_at)) {
+                $tenant->subscription_expired_at = now()->addMonth();
+            }
+        });
+    }
+
+    public function getHasActiveSubscriptionAttribute(): bool
+    {
+        // Jika tanggal expired masih di masa depan, berarti aktif
+        // Jika null, kita anggap tidak aktif
+        return $this->subscription_expired_at && $this->subscription_expired_at->isFuture();
+    }
+
+    public function getNextInvoiceAmountAttribute(): int
+    {
+        $employeeCount = $this->employees()
+            ->whereNotIn('employment_status', ['resigned', 'terminated', 'retired'])
+            ->count();
+
+        return $employeeCount * 3000;
+    }
+
     // Relasi ke User (Owner & Admin)
     public function users()
     {
