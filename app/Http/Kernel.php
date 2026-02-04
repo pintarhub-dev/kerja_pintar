@@ -26,6 +26,7 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'tenant.setup' => \App\Http\Middleware\EnsureTenantSetup::class,
         'tenant' => \App\Http\Middleware\EnsureTenant::class,
+        'check.subscription' => \App\Http\Middleware\CheckTenantSubscription::class,
     ];
 
     /**
