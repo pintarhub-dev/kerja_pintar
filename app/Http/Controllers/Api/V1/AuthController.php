@@ -208,6 +208,20 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateFcmToken(Request $request)
+    {
+        $request->validate([
+            'fcm_token' => 'required|string',
+        ]);
+
+        $user = $request->user();
+        $user->update([
+            'fcm_token' => $request->fcm_token
+        ]);
+
+        return response()->json(['message' => 'FCM Token updated successfully']);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
