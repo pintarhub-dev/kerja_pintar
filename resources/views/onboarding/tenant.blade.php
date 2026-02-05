@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Setup Perusahaan - Kerja Pintar</title>
+    <title>Setup Perusahaan - Absen Pintar</title>
     <style>
         body {
             font-family: sans-serif;
@@ -120,7 +120,7 @@
 
             <div class="form-group">
                 <label for="name">Nama Perusahaan / Organisasi</label>
-                <input type="text" id="name" name="name" placeholder="Contoh: PT Kerja Pintar" value="{{ old('name') }}">
+                <input type="text" id="name" name="name" placeholder="Contoh: PT Absen Pintar" value="{{ old('name') }}">
 
                 @error('name')
                     <div class="error">{{ $message }}</div>

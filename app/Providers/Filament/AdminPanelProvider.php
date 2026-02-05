@@ -36,8 +36,8 @@ class AdminPanelProvider extends PanelProvider
             ->path('dashboard')
             ->brandName(
                 fn() => Auth::check() && app('tenant_id')
-                    ? 'Kerja Pintar - ' . Auth::user()->tenant->name
-                    : 'Kerja Pintar'
+                    ? 'Absen Pintar - ' . Auth::user()->tenant->name
+                    : 'Absen Pintar'
             )
             // ->brandLogo(asset('images/logo.png'))
             ->profile(EditProfile::class)

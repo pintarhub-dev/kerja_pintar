@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<head><title>Dashboard - Kerja Pintar</title></head>
+<head><title>Dashboard - Absen Pintar</title></head>
 <body>
     <h2>Dashboard</h2>
 
