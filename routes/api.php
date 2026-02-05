@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\LeaveBalanceController;
 use App\Http\Controllers\Api\V1\LeaveRequestController;
 // use App\Http\Controllers\Api\V1\OvertimeRequestController;
 use App\Http\Controllers\Api\V1\LeaveTypeController;
+use App\Http\Controllers\Api\V1\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -56,6 +57,13 @@ Route::prefix('v1')->group(function () {
                 Route::put('requests/{id}', 'update');
                 Route::delete('requests/{id}', 'destroy');
             });
+        });
+
+        Route::prefix('notifications')->controller(NotificationController::class)->group(function () {
+            Route::get('/', 'index');
+            Route::post('/{id}/read', 'markAsRead');
+            Route::post('/read-all', 'markAllRead');
+            Route::get('/unread-count', 'unreadCount');
         });
 
         // FITUR UNTUK KEMBANGAN MASA DEPAN
