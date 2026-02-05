@@ -29,7 +29,7 @@ Route::prefix('v1')->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
 
         Route::get('user/me', [AuthController::class, 'me']);
-        Route::post('/update-fcm-token', [AuthController::class, 'updateFcmToken']);
+        Route::post('user/update-fcm-token', [AuthController::class, 'updateFcmToken']);
 
         // Route::middleware('check.subscription')->group(function () {
         Route::post('user/update', [AuthController::class, 'updateProfile']);
