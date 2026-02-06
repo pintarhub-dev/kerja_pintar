@@ -320,6 +320,7 @@ class LeaveRequestResource extends Resource
                         'rejected' => 'Rejected',
                     ]),
                 Tables\Filters\SelectFilter::make('leave_type_id')
+                    ->label('Jenis Cuti')
                     ->relationship('leaveType', 'name'),
             ])
             ->headerActions([
