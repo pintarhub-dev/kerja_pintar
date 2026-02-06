@@ -23,7 +23,7 @@ class AttendanceController extends Controller
 
         // 1. Load relasi Employee seperlunya saja (Lokasi & Shift Master)
         // Jangan load attendanceSummaries disini, berat!
-        $employee = $request->user()->employee->load(['workLocation', 'attendanceSummaries.details.workLocation']);
+        $employee = $user->employee->load(['workLocation', 'attendanceSummaries.details.workLocation']);
 
         // Validasi
         $request->validate([
