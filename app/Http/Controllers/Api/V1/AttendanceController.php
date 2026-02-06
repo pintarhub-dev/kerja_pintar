@@ -207,15 +207,15 @@ class AttendanceController extends Controller
             : '--:--';
 
         $statusCode = 'not_present';
-        $message = 'Anda belum absen hari ini.';
+        $message = 'Kamu belum absen hari ini.';
 
         if ($summary) {
             if ($summary->clock_in && !$summary->clock_out) {
                 $statusCode = 'checked_in';
-                $message = 'Selamat bekerja! Jangan lupa absen pulang.';
+                $message = 'Selamat bekerja, Jangan lupa absen pulang 😊';
             } elseif ($summary->clock_out) {
                 $statusCode = 'checked_out';
-                $message = 'Terima kasih, hati-hati di jalan!';
+                $message = 'Terima kasih, hati-hati di jalan yaa 😉';
             }
         }
 
@@ -258,7 +258,7 @@ class AttendanceController extends Controller
             if (is_null($employee->registered_device_id)) {
                 $employee->update(['registered_device_id' => $request->device_id]);
             } else if ($employee->registered_device_id !== $request->device_id) {
-                return $this->errorResponse('Anda menggunakan HP baru. Silakan hubungi HRD untuk reset device.', 403);
+                return $this->errorResponse('Kamu menggunakan HP baru. Silakan hubungi HRD untuk reset device.', 403);
             }
         }
 
@@ -284,7 +284,7 @@ class AttendanceController extends Controller
                 ];
                 $label = $statusLabels[$existingSummary->status] ?? 'Tidak Hadir';
 
-                return $this->errorResponse("Anda tercatat sedang {$label} hari ini. Akses absen dikunci.", 403);
+                return $this->errorResponse("Kamu tercatat sedang {$label} hari ini. Akses absen dikunci.", 403);
             }
         }
 
@@ -327,7 +327,7 @@ class AttendanceController extends Controller
             $shift = $dailySchedule->shift;
 
             if (!$shift) {
-                return $this->errorResponse('Anda diliburkan untuk hari ini.', 403);
+                return $this->errorResponse('Kamu diliburkan untuk hari ini.', 403);
             }
             $shiftFound = true;
         } elseif ($assignment) {
@@ -338,7 +338,7 @@ class AttendanceController extends Controller
             if ($shift) {
                 $shiftFound = true;
             } else {
-                return $this->errorResponse('Hari ini adalah jadwal Libur (Off Day) Anda sesuai pola kerja.', 403);
+                return $this->errorResponse('Hari ini adalah jadwal Libur (Off Day) Kamu sesuai pola kerja.', 403);
             }
         } else {
             // === KASUS C: GAK ADA OVERRIDE & GAK ADA PATTERN ===
@@ -378,13 +378,13 @@ class AttendanceController extends Controller
         // 2. Cek Sesi Gantung
         $openSession = $summary->details()->whereNull('clock_out_time')->first();
         if ($openSession) {
-            return $this->errorResponse('Anda masih memiliki sesi aktif. Silakan Clock Out terlebih dahulu.', 400);
+            return $this->errorResponse('Kamu masih memiliki sesi aktif. Silakan Clock Out terlebih dahulu.', 400);
         }
 
         // Validasi Sesi Kedua untuk Karyawan Kantor
         if (! $employee->is_flexible_location && $summary->details()->exists()) {
             if (!$openSession) {
-                return $this->errorResponse('Anda karyawan kantor, hanya diperbolehkan 1x Sesi Absen per hari.', 400);
+                return $this->errorResponse('Kamu karyawan kantor, hanya diperbolehkan 1x Sesi Absen per hari.', 400);
             }
         }
 
@@ -530,7 +530,7 @@ class AttendanceController extends Controller
             ->first();
 
         if (!$summary) {
-            return $this->errorResponse('Anda belum melakukan Clock In hari ini.', 400);
+            return $this->errorResponse('Kamu belum melakukan Clock In hari ini.', 400);
         }
 
         $blockedStatuses = ['leave', 'sick', 'permit', 'holiday'];
@@ -544,7 +544,7 @@ class AttendanceController extends Controller
             ];
             $label = $statusLabels[$summary->status] ?? 'Tidak Hadir';
 
-            return $this->errorResponse("Anda tercatat sedang {$label} hari ini. Akses absen dikunci.", 403);
+            return $this->errorResponse("Kamu tercatat sedang {$label} hari ini. Akses absen dikunci.", 403);
         }
 
         // 3. Cari Sesi Aktif
@@ -554,7 +554,7 @@ class AttendanceController extends Controller
             ->first();
 
         if (!$activeSession) {
-            return $this->errorResponse('Tidak ada sesi aktif. Anda mungkin sudah Clock Out sebelumnya.', 400);
+            return $this->errorResponse('Tidak ada sesi aktif. Kamu mungkin sudah Clock Out sebelumnya.', 400);
         }
 
         // ---------------------------------------------------------
@@ -580,7 +580,7 @@ class AttendanceController extends Controller
         // ---------------------------------------------------------
         // LOGIC EARLY LEAVE & MESSAGE
         // ---------------------------------------------------------
-        $metaMessage = 'Hati-hati di jalan!';
+        $metaMessage = 'Hati-hati di jalan.';
         $earlyLeaveMinutes = 0;
 
         // Hanya hitung jika ada jadwal pulang (Flexible shift mungkin null)
@@ -620,11 +620,11 @@ class AttendanceController extends Controller
                 // Opsional: Beri toleransi misal 5 menit dianggap on-time (Untuk kembangan nanti)
                 // if ($earlyLeaveMinutes > 5) { ... }
 
-                $metaMessage = "Anda pulang lebih awal {$earlyLeaveMinutes} menit dari jadwal.";
+                $metaMessage = "Kamu pulang lebih awal {$earlyLeaveMinutes} menit dari jadwal.";
             } elseif ($actualOut->greaterThan($scheduleOut)) {
                 // KASUS: PULANG TELAT (Potensi Lembur)
                 $diff = $actualOut->diffInMinutes($scheduleOut);
-                $metaMessage = "Anda pulang terlambat {$diff} menit. Silakan ajukan lembur jika diperintahkan.";
+                $metaMessage = "Kamu pulang terlambat {$diff} menit. Silakan ajukan lembur jika diperintahkan.";
             }
         }
 
