@@ -145,8 +145,8 @@ class LeaveRequestController extends Controller
                 'leave_type' => [
                     'name' => $leaveRequest->leaveType->name ?? 'Cuti',
                 ],
-                'attachment_url' => $leaveRequest->attachment_path
-                    ? asset('storage/' . $leaveRequest->attachment_path)
+                'attachment_url' => $leaveRequest->attachment
+                    ? asset('storage/' . $leaveRequest->attachment)
                     : null,
                 'created_at' => $leaveRequest->created_at->format('d M Y H:i'),
             ]
