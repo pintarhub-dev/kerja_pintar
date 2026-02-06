@@ -517,8 +517,8 @@ class LeaveRequestResource extends Resource
                         $employeeUser = $record->employee->user;
                         if ($employeeUser) {
                             // 1. SIAPKAN DATA PESAN
-                            $title = "Cuti Disetujui ✅";
-                            $body = "Pengajuan cuti tanggal " . $record->start_date->format('d M') . " disetujui.";
+                            $title = "Pengajuan " . $record->leaveType->name . " Disetujui ✅";
+                            $body = "Pengajuan " . $record->leaveType->name . " tanggal " . $record->start_date->format('d M') . " disetujui.";
                             $dataPayload = [
                                 'type' => $record->leaveType->category,
                                 'id' => (string) $record->id
@@ -615,9 +615,9 @@ class LeaveRequestResource extends Resource
 
                         if ($employeeUser) {
                             // Siapkan Konten Pesan
-                            $title = "Pengajuan Ditolak ❌";
+                            $title = "Pengajuan " . $record->leaveType->name . " Ditolak ❌";
                             // Masukkan alasan penolakan ke body pesan biar jelas
-                            $body = "Maaf, pengajuan cuti Anda ditolak. Alasan: " . $data['rejection_reason'];
+                            $body = "Maaf, pengajuan " . $record->leaveType->name . " Anda ditolak. Alasan: " . $data['rejection_reason'];
 
                             $dataPayload = [
                                 'type' => $record->leaveType->category,
