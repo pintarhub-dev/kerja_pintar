@@ -89,9 +89,16 @@ class LeaveRequestController extends Controller
     {
         $employee = $request->user()->employee;
 
-        $requests = LeaveRequest::with('leaveType')
-            ->where('employee_id', $employee->id)
-            ->orderBy('created_at', 'desc')
+        $query = LeaveRequest::with('leaveType')
+            ->where('employee_id', $employee->id);
+
+        // Filter Bulan & Tahun
+        if ($request->has('month') && $request->has('year')) {
+            $query->whereMonth('start_date', $request->month)
+                ->whereYear('start_date', $request->year);
+        }
+
+        $requests = $query->orderBy('created_at', 'desc')
             ->paginate(10);
 
         $data = $requests->through(function ($item) {
@@ -105,7 +112,7 @@ class LeaveRequestController extends Controller
                 'reason' => $item->reason,
                 'attachment_url' => $item->attachment ? url(Storage::url($item->attachment)) : null,
                 'status' => $item->status,
-                'status_label' => $this->getStatusLabel($item->status), // Helper label bhs indo
+                'status_label' => $this->getStatusLabel($item->status),
                 'rejection_reason' => $item->rejection_reason,
                 'created_at' => $item->created_at->format('d M Y H:i'),
             ];
