@@ -192,10 +192,27 @@ class UserResource extends Resource
                     ]),
             ])
             ->actions([
+    Tables\Actions\EditAction::make(),
+
+    Tables\Actions\Action::make('forceLogout')
+        ->label('Force Logout')
+        ->color('danger')
+        ->icon('heroicon-o-arrow-right-on-rectangle')
+        ->requiresConfirmation()
+        ->visible(fn ($record) => $record->role !== 'superadmin')
+        ->action(fn () => null),
+
+    Tables\Actions\DeleteAction::make()
+        ->visible(fn($record) => $record->role !== 'superadmin'),
+])    
+            /*
+            ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make()
-                    ->visible(fn($record) => $record->role !== 'superadmin')
+                    ->visible(fn($record) => $record->role !== '')
             ])
+                    */
+            
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     DeleteBulkAction::make()
