@@ -39,6 +39,7 @@ class AdminPanelProvider extends PanelProvider
                     ? 'Absen Pintar - ' . Auth::user()->tenant->name
                     : 'Absen Pintar'
             )
+            ->favicon(asset('images/favicon/favicon.ico'))
             // ->brandLogo(asset('images/logo.png'))
             ->profile(EditProfile::class)
             ->colors([
